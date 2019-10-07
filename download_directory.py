@@ -8,56 +8,59 @@ class Crawler:
     url = ""
     base = "./temp/"
     temp_url = ""
-    level_in = 0
-    current_url = {}
+    myUrls = []
 
     def __init__(self, url):
         self.url = url
         self.temp_url = url
 
-    def myMainMethod(self, url=None, level=0):
-        self.level_in = level
-        url = url if url else self.url
+    def handle(self):
+        url = self.url
         hrefs = self.gettingAllHrefs(url)
         in_hrefs = self.gettingInsideHrefs(hrefs)
         filter_links = self.gettingFilteredLinks(in_hrefs)
 
-        print "filter_links", filter_links
-
-        for key,val in enumerate(filter_links):
+        for key, val in enumerate(filter_links):
             returnVerify = self.verifyHasFolder(val)
-            print "returnVerify" , returnVerify
             if returnVerify[0]:
-                self.current_url[level] = returnVerify[1]
-                self.myMainMethod(returnVerify[1], level+1)
+                self.processDepth(returnVerify[1])
             else:
-                self.current_url[level] = returnVerify[1]
-                self.DownloadFileParsing(val)
-        
-        return level
+                self.download_files(depthCheck + self.DownloadFileParsing(val))
 
+        print "completed"
+
+    def processDepth(self, depthCheck):
+        url = self.url + depthCheck
+        hrefs = self.gettingAllHrefs(url)
+        in_hrefs = self.gettingInsideHrefs(hrefs)
+        filter_links = self.gettingFilteredLinks(in_hrefs)
+
+        for key, val in enumerate(filter_links):
+            returnVerify = self.verifyHasFolder(val)
+            if returnVerify[0]:
+                self.processDepth(returnVerify[1])
+            else:
+                self.download_files(depthCheck + self.DownloadFileParsing(val))
 
     def verifyHasFolder(self, val):
         if val[-1] == '/':
             startfrom = 1 if val[0] == "/" else 0
             self.temp_url = self.url + val[startfrom:]
-            return [1,self.url + val[startfrom:]]
+            return [1, val[startfrom:]]
         val = val.split('/')
         val.remove(val[-1])
         val = '/'.join(val)
-        return [0, self.url + val.strip('/') +'/']
+        return [0, val.strip('/') +'/']
 
 
     def DownloadFileParsing(self, val):
         startfrom = 1 if val[0] == "/" else 0
-        if val[-1] != '/':
-            filename = val[startfrom:]
-            filename = filename.split('/')
-            filename = filename[-1]
-            self.download_files(filename)
+        filename = val[startfrom:]
+        filename = filename.split('/')
+        filename = filename[-1]
+        return filename
 
     def gettingAllHrefs(self, url):
-
         sessionRequest = requests.session()
         requestObj = requests.get(url)
         content = requestObj.content
@@ -74,7 +77,6 @@ class Crawler:
                 start_from = hrefs
             else:
                 run = 0
-
         return myFullLinks
 
     def gettingInsideHrefs(self, data):
@@ -119,27 +121,25 @@ class Crawler:
         urlWords = self.url.split('/')
         urlWords = filter(None, urlWords)
         return urlWords
-		
 
     def createDir(self, dir):
         base = ""
         dir = dir.split('/')
-        for key,val in enumerate(dir):
-            if not os.path.isdir(base+val):
-                os.makedirs(base+val)
+        for key, val in enumerate(dir):
+            if not os.path.isdir(base + val):
+                os.makedirs(base + val)
             base = base + val + "/"
-                
 
     def download_files(self, filename):
         base = self.base
-        folders = (self.current_url[self.level_in -1]).replace(self.url, "")
-        downloadDir = base + folders.strip('/')
-        self.createDir(downloadDir)
+        folders = filename.split('/')
+        folders.remove(folders[-1])
+        folders = '/'.join(folders)
+        self.createDir(base + folders)
         filedownload = urllib.URLopener()
-        print "downloading ",self.current_url[self.level_in -1] + filename
-        filedownload.retrieve(self.current_url[self.level_in -1] + filename , downloadDir+"/"+filename)
+        print "downloading ", self.url + filename
+        filedownload.retrieve(self.url + filename, base + "/" + filename)
 
 
-
-mycall = Crawler("https://www.example.com/")
-mycall.myMainMethod()
+mycall = Crawler("https://www.example.com/test/")
+mycall.handle()
