@@ -1,7 +1,5 @@
-import requests, json
+import requests, json, urllib, os, shutil
 from pprint import pprint
-import urllib
-import os
 
 class Crawler:
 
@@ -25,9 +23,21 @@ class Crawler:
             if returnVerify[0]:
                 self.processDepth(returnVerify[1])
             else:
-                self.download_files(depthCheck + self.DownloadFileParsing(val))
+                self.download_files(self.DownloadFileParsing(val))
+        self.createZip()
 
         print "completed"
+
+    def createZip(self):
+        name = self.url
+        name = name.replace("http://", "")
+        name = name.replace("https://", "")
+        name = name.replace("www.", "")
+        name = name.strip("/")
+        name = name.replace(".", "_")
+        name = name.replace("/", "_")
+        self.createDir('outputs')
+        shutil.make_archive('outputs/'+name, 'zip', 'temp/')
 
     def processDepth(self, depthCheck):
         url = self.url + depthCheck
@@ -141,5 +151,5 @@ class Crawler:
         filedownload.retrieve(self.url + filename, base + "/" + filename)
 
 
-mycall = Crawler("https://www.example.com/test/")
+mycall = Crawler("http://example,com/name/")
 mycall.handle()
